@@ -1,6 +1,7 @@
 const API_KEY = 'live_BbbW8c9j31q4eM5Jqycu84BOB15VXdfKHyNw1kDUko3YEeToILaf2Gk7JIdqNYMI';
 const API_URL_RANDOM = `https://api.thedogapi.com/v1/images/search?limit=2&api_key=${API_KEY}`;
-const API_URL_FAV = `https://api.thedogapi.com/v1/favourites?limit=20&api_key=${API_KEY}`;
+const API_URL_FAV = `https://api.thedogapi.com/v1/favourites?limit=40&api_key=${API_KEY}`;
+const API_URL_FAV_DEL = (id) => `https://api.thedogapi.com/v1/favourites/${id}?api_key=${API_KEY}`;
 
 const spanError = document.getElementById('error');
 
@@ -11,14 +12,20 @@ const loadRandomDogs = async () => {
 
         if (res.status !== 200) {
             spanError.innerHTML = `Hubo un error: ${res.status} ${res.statusText}`;
-        } else {
-            console.log('RANDOM', data);
-            const img1 = document.getElementById('img1');
-            const img2 = document.getElementById('img2');
-      
-            img1.src = data[0].url;
-            img2.src = data[1].url;
+            return;
         }
+
+        console.log('RANDOM', data);
+        const img1 = document.getElementById('img1');
+        const img2 = document.getElementById('img2');
+        const btn1 = document.getElementById('btn1');
+        const btn2 = document.getElementById('btn2');
+      
+        img1.src = data[0].url;
+        img2.src = data[1].url;
+
+        btn1.onclick = () => saveFavouriteDog(data[0].id);
+        btn2.onclick = () => saveFavouriteDog(data[1].id);
     } catch (error) {
         spanError.innerHTML = `Hubo un error: ${error.message}`;
     }
@@ -28,44 +35,87 @@ const loadFavoriteDogs = async () => {
     try {
         const res = await fetch(API_URL_FAV);
         const data = await res.json();
-        
+
         if (res.status !== 200) {
             spanError.innerHTML = `Hubo un error cargando favoritos: ${res.status} ${res.statusText}`;
-        } else {
-            console.log('FAVOURITES', data);
-            // Aquí puedes agregar el código para mostrar los favoritos
+            return;
         }
+
+        const section = document.getElementById('favoriteDogs');
+        section.innerHTML = "";
+
+        const h2 = document.createElement('h2');
+        h2.textContent = 'Perritos favoritos';
+        section.appendChild(h2);
+
+        console.log('FAVOURITES', data);
+
+        const fragment = document.createDocumentFragment();
+
+        data.forEach(dog => {
+            const article = document.createElement('article');
+            const img = document.createElement('img');
+            const button = document.createElement('button');
+            const btntext = document.createTextNode('Sacar perrito de favs');
+
+            img.src = dog.image.url;
+            img.width = 150;
+            button.appendChild(btntext);
+            button.onclick = () => deleteFavouriteDog(dog.id);
+            article.appendChild(img);
+            article.appendChild(button);
+            fragment.appendChild(article);
+        });
+
+        section.appendChild(fragment);
     } catch (error) {
         spanError.innerHTML = `Hubo un error cargando favoritos: ${error.message}`;
     }
 };
 
-const saveFavouriteDogs = async () =>{
-    try{
-        const res = await fetch(API_URL_FAV,{
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json'
+const saveFavouriteDog = async (id) => {
+    try {
+        const res = await fetch(API_URL_FAV, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
             },
-            body:JSON.stringify({
-                image_id:"XXNYMzrDO"
-
+            body: JSON.stringify({
+                image_id: id
             })
-        })
+        });
 
-        const data = await res.json()
+        const data = await res.json();
 
-        if(res.status !== 200) {
-            spanError.innerHTML = `Hubo un error cargando favoritos: ${res.status} ${res.statusText}`
-        } else{
-            console.log('Save',data)
+        if (res.status !== 200) {
+            spanError.innerHTML = `Hubo un error guardando favorito: ${res.status} ${res.statusText}`;
+        } else {
+            console.log('Save', data);
+            loadFavoriteDogs();
         }
-
-
-    }catch(error){
-        spanError.innerHTML = `Hubo un error cargando favoritos: ${error.message}`;
+    } catch (error) {
+        spanError.innerHTML = `Hubo un error guardando favorito: ${error.message}`;
     }
-}
+};
+
+const deleteFavouriteDog = async (id) => {
+    try {
+        const res = await fetch(API_URL_FAV_DEL(id), {
+            method: 'DELETE'
+        });
+
+        const data = await res.json();
+
+        if (res.status !== 200) {
+            spanError.innerHTML = `Hubo un error eliminando favorito: ${res.status} ${res.statusText}`;
+        } else {
+            console.log('Imagen eliminada de favoritos', data);
+            loadFavoriteDogs();
+        }
+    } catch (error) {
+        spanError.innerHTML = `Hubo un error eliminando favorito: ${error.message}`;
+    }
+};
 
 const refreshContent = () => {
     loadRandomDogs();
@@ -73,7 +123,6 @@ const refreshContent = () => {
 
 loadRandomDogs();
 loadFavoriteDogs();
-saveFavouriteDogs();
 
 const refresh = document.getElementById('refresh-button');
 refresh.addEventListener('click', refreshContent);
